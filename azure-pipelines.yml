@@ -1,3 +1,104 @@
+# trigger:
+# - main
+
+# variables:
+#   nodeVersion: '18.x'
+#   artifactName: 'nodejs-app'
+#   azureSubscription: 'azure-appservice-connection'
+#   webAppNameDev: 'nodejs-demo-app-test'
+#   webAppNameProd: 'nodejs-demo-app-test'
+
+# stages:
+# # ================= CI STAGE =================
+# - stage: CI
+#   displayName: 'Build and Test'
+#   jobs:
+#   - job: Build
+#     pool:
+#       name: self-hosted-pool
+#     steps:
+#     - checkout: self
+
+#     - task: NodeTool@0
+#       inputs:
+#         versionSpec: '$(nodeVersion)'
+#       displayName: 'Install Node.js'
+
+#     - script: npm install
+#       displayName: 'Install dependencies'
+
+#     - script: npm test -- --ci
+#       displayName: 'Run unit tests'
+
+#     - task: PublishTestResults@2
+#       inputs:
+#         testResultsFormat: 'JUnit'
+#         testResultsFiles: '**/test-results/junit.xml'
+#         failTaskOnFailedTests: true
+#       displayName: 'Publish test results'
+
+#     - script: |
+#         mkdir dist
+#         xcopy app dist\app /E /I
+#         xcopy assets dist\assets /E /I
+#         copy package.json dist\
+#         copy package-lock.json dist\
+#       displayName: 'Prepare build artifact'
+
+#     - task: PublishPipelineArtifact@1
+#       displayName: 'Publish pipeline artifact'
+#       inputs:
+#         targetPath: 'dist'
+#         artifact: 'nodejs-app'
+
+# # ================= CD DEV =================
+# - stage: Deploy_Dev
+#   displayName: 'Deploy to Dev'
+#   dependsOn: CI
+#   jobs:
+#   - deployment: DeployDev
+#     environment: dev
+#     pool:
+#       name: self-hosted-pool
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - download: current
+#             artifact: nodejs-app
+
+#           - task: AzureWebApp@1
+#             displayName: 'Deploy to Dev App Service'
+#             inputs:
+#               azureSubscription: $(azureSubscription)
+#               appType: 'webAppLinux'
+#               appName: $(webAppNameDev)
+#               package: '$(Pipeline.Workspace)/$(artifactName)'
+
+# # ================= CD PROD =================
+# - stage: Deploy_Prod
+#   displayName: 'Deploy to Production'
+#   dependsOn: Deploy_Dev
+#   jobs:
+#   - deployment: DeployProd
+#     environment: prod   # approval happens here
+#     pool:
+#       name: self-hosted-pool
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - download: current
+#             artifact: $(artifactName)
+
+#           - task: AzureWebApp@1
+#             displayName: 'Deploy to Prod App Service'
+#             inputs:
+#               azureSubscription: $(azureSubscription)
+#               appType: 'webAppLinux'
+#               appName: $(webAppNameProd)
+#               package: '$(Pipeline.Workspace)/$(artifactName)'
+
 trigger:
 - main
 
@@ -5,11 +106,10 @@ variables:
   nodeVersion: '18.x'
   artifactName: 'nodejs-app'
   azureSubscription: 'azure-appservice-connection'
-  webAppNameDev: 'nodejs-demo-app-test'
-  webAppNameProd: 'nodejs-demo-app-test'
+  webAppName: 'nodejs-demo-app-test'   # same app for demo
 
 stages:
-# ================= CI STAGE =================
+# ================= CI =================
 - stage: CI
   displayName: 'Build and Test'
   jobs:
@@ -22,20 +122,12 @@ stages:
     - task: NodeTool@0
       inputs:
         versionSpec: '$(nodeVersion)'
-      displayName: 'Install Node.js'
 
     - script: npm install
       displayName: 'Install dependencies'
 
     - script: npm test -- --ci
       displayName: 'Run unit tests'
-
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFormat: 'JUnit'
-        testResultsFiles: '**/test-results/junit.xml'
-        failTaskOnFailedTests: true
-      displayName: 'Publish test results'
 
     - script: |
         mkdir dist
@@ -46,17 +138,19 @@ stages:
       displayName: 'Prepare build artifact'
 
     - task: PublishPipelineArtifact@1
-      displayName: 'Publish pipeline artifact'
+      displayName: 'Publish artifact'
       inputs:
         targetPath: 'dist'
-        artifact: 'nodejs-app'
+        artifact: '$(artifactName)'
 
-# ================= CD DEV =================
+# ================= DEV =================
 - stage: Deploy_Dev
   displayName: 'Deploy to Dev'
   dependsOn: CI
+  variables:
+  - group: dev-vars
   jobs:
-  - deployment: DeployDev
+  - deployment: DevDeploy
     environment: dev
     pool:
       name: self-hosted-pool
@@ -65,22 +159,52 @@ stages:
         deploy:
           steps:
           - download: current
-            artifact: nodejs-app
+            artifact: $(artifactName)
 
           - task: AzureWebApp@1
-            displayName: 'Deploy to Dev App Service'
             inputs:
               azureSubscription: $(azureSubscription)
-              appType: 'webAppLinux'
-              appName: $(webAppNameDev)
+              appType: webAppLinux
+              appName: $(webAppName)
               package: '$(Pipeline.Workspace)/$(artifactName)'
+              appSettings: |
+                -NODE_ENV $(NODE_ENV)
 
-# ================= CD PROD =================
-- stage: Deploy_Prod
-  displayName: 'Deploy to Production'
+# ================= TEST =================
+- stage: Deploy_Test
+  displayName: 'Deploy to Test'
   dependsOn: Deploy_Dev
+  variables:
+  - group: test-vars
   jobs:
-  - deployment: DeployProd
+  - deployment: TestDeploy
+    environment: test
+    pool:
+      name: self-hosted-pool
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifactName)
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: webAppLinux
+              appName: $(webAppName)
+              package: '$(Pipeline.Workspace)/$(artifactName)'
+              appSettings: |
+                -NODE_ENV $(NODE_ENV)
+
+# ================= PROD =================
+- stage: Deploy_Prod
+  displayName: 'Deploy to Prod'
+  dependsOn: Deploy_Test
+  variables:
+  - group: prod-vars
+  jobs:
+  - deployment: ProdDeploy
     environment: prod   # approval happens here
     pool:
       name: self-hosted-pool
@@ -92,9 +216,11 @@ stages:
             artifact: $(artifactName)
 
           - task: AzureWebApp@1
-            displayName: 'Deploy to Prod App Service'
             inputs:
               azureSubscription: $(azureSubscription)
-              appType: 'webAppLinux'
-              appName: $(webAppNameProd)
+              appType: webAppLinux
+              appName: $(webAppName)
               package: '$(Pipeline.Workspace)/$(artifactName)'
+              appSettings: |
+                -NODE_ENV $(NODE_ENV)
+
