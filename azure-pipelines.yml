@@ -45,10 +45,10 @@ stages:
         copy package-lock.json dist\
       displayName: 'Prepare build artifact'
 
-    - task: PublishBuildArtifacts@1
+    - task: PublishPipelineArtifact@1
       displayName: 'Publish pipeline artifact'
       inputs:
-        PathtoPublish: 'dist'
+        targetPath: 'dist'
         artifact: 'nodejs-app'
 
 # ================= CD DEV =================
