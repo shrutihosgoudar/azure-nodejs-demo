@@ -46,11 +46,10 @@ stages:
       displayName: 'Prepare build artifact'
 
     - task: PublishBuildArtifacts@1
+      displayName: 'Publish pipeline artifact'
       inputs:
         PathtoPublish: 'dist'
-        ArtifactName: '$(artifactName)'
-        publishLocation: 'Container'
-      displayName: 'Publish artifact'
+        artifact: '$(artifactName)'
 
 # ================= CD DEV =================
 - stage: Deploy_Dev
