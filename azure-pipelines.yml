@@ -119,7 +119,7 @@ stages:
     steps:
     - checkout: self
     
-    - task: SonarQubePrepare@5
+    - task: SonarQubePrepare@6
       displayName: 'Prepare SonarCloud analysis'
       inputs:
         SonarQube: 'sonarqube-connection'
@@ -137,11 +137,11 @@ stages:
       displayName: 'Run unit tests'
 
      #  Run SonarCloud analysis
-    - task: SonarQubeAnalyze@5
+    - task: SonarQubeAnalyze@6
       displayName: 'Run SonarCloud analysis'
 
     #  Enforce Quality Gate (FAILS CI if not passed)
-    - task: SonarQubePublish@5
+    - task: SonarQubePublish@6
       displayName: 'Publish Quality Gate Result'
       inputs:
         pollingTimeoutSec: '300' 
