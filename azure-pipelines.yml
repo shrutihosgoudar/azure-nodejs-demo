@@ -223,4 +223,5 @@ stages:
               package: '$(Pipeline.Workspace)/$(artifactName)'
               appSettings: |
                 -NODE_ENV $(NODE_ENV)
+                
 
