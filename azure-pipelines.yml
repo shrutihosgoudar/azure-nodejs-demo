@@ -119,7 +119,7 @@ stages:
     steps:
     - checkout: self
     
-    - task: SonarCloudPrepare@5
+    - task: SonarCloudPrepare@1
       displayName: 'Prepare SonarCloud analysis'
       inputs:
         SonarCloud: 'soanr-scan'
@@ -138,11 +138,11 @@ stages:
       displayName: 'Run unit tests'
 
      #  Run SonarCloud analysis
-    - task: SonarCloudAnalyze@5
+    - task: SonarCloudAnalyze@1
       displayName: 'Run SonarCloud analysis'
 
     #  Enforce Quality Gate (FAILS CI if not passed)
-    - task: SonarCloudPublish@5
+    - task: SonarCloudPublish@1
       displayName: 'Publish Quality Gate Result'
       inputs:
         pollingTimeoutSec: '300'
