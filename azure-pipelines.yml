@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  vmImage: self-hosted-pool
+  name: self-hosted-pool
 
 variables:
   nodeVersion: '20.x'
