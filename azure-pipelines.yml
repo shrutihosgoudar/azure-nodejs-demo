@@ -122,7 +122,7 @@ stages:
     - task: SonarCloudPrepare@5
       displayName: 'Prepare SonarCloud analysis'
       inputs:
-        SonarCloud: 'sonarqube-connection'
+        SonarCloud: 'soanr scan'
         organization: 'shruti-devops1'
         scannerMode: 'CLI'
         configMode: 'file'
