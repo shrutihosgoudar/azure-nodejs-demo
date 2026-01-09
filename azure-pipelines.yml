@@ -1,0 +1,53 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  nodeVersion: '20.x'
+
+steps:
+# 1. Checkout source code
+- checkout: self
+
+# 2. Install Node.js
+- task: NodeTool@0
+  inputs:
+    versionSpec: '$(nodeVersion)'
+  displayName: 'Install Node.js'
+
+# 3. Install dependencies
+- script: |
+    npm ci
+  displayName: 'Install dependencies'
+
+# 4. Run unit tests
+- script: |
+    npm test -- --ci --reporters=default --reporters=jest-junit
+  displayName: 'Run unit tests'
+  env:
+    JEST_JUNIT_OUTPUT_DIR: $(System.DefaultWorkingDirectory)/test-results
+    JEST_JUNIT_OUTPUT_NAME: junit.xml
+
+# 5. Publish test results
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**/junit.xml'
+    failTaskOnFailedTests: true
+  displayName: 'Publish test results'
+
+# 6. Prepare build artifact
+- script: |
+    mkdir -p dist
+    cp -r app assets package.json package-lock.json dist/
+  displayName: 'Prepare build artifact'
+
+# 7. Publish artifact
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'dist'
+    ArtifactName: 'nodejs-app'
+    publishLocation: 'Container'
+  displayName: 'Publish artifact'
