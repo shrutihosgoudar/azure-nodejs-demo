@@ -118,6 +118,13 @@ stages:
       name: self-hosted-pool
     steps:
     - checkout: self
+    
+    - task: SonarQubePrepare@5
+      displayName: 'Prepare SonarCloud analysis'
+      inputs:
+        SonarQube: 'sonarqube-connection'
+        scannerMode: 'CLI'
+        configMode: 'file'
 
     - task: NodeTool@0
       inputs:
@@ -128,6 +135,16 @@ stages:
 
     - script: npm test -- --ci
       displayName: 'Run unit tests'
+
+     #  Run SonarCloud analysis
+    - task: SonarQubeAnalyze@5
+      displayName: 'Run SonarCloud analysis'
+
+    #  Enforce Quality Gate (FAILS CI if not passed)
+    - task: SonarQubePublish@5
+      displayName: 'Publish Quality Gate Result'
+      inputs:
+        pollingTimeoutSec: '300' 
 
     - script: |
         mkdir dist
@@ -147,6 +164,7 @@ stages:
 - stage: Deploy_Dev
   displayName: 'Deploy to Dev'
   dependsOn: CI
+  condition: succeeded()   # runs only if CI + Sonar passed
   variables:
   - group: dev-vars
   jobs:
