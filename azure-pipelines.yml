@@ -1,53 +1,101 @@
 trigger:
 - main
 
-pool:
-  name: self-hosted-pool
-
 variables:
   nodeVersion: '18.x'
+  artifactName: 'nodejs-app'
+  azureSubscription: 'azure-appservice-connection'
+  webAppNameDev: 'nodejs-demo-app-test'
+  webAppNameProd: 'nodejs-demo-app-test'
 
-steps:
-# 1. Checkout source code
-- checkout: self
+stages:
+# ================= CI STAGE =================
+- stage: CI
+  displayName: 'Build and Test'
+  jobs:
+  - job: Build
+    pool:
+      name: self-hosted-pool
+    steps:
+    - checkout: self
 
-# 2. Install Node.js
-- task: NodeTool@0
-  inputs:
-    versionSpec: '$(nodeVersion)'
-  displayName: 'Install Node.js'
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js'
 
-# 3. Install dependencies
-- script: |
-    npm install
-  displayName: 'Install dependencies'
+    - script: npm install
+      displayName: 'Install dependencies'
 
-# 4. Run unit tests
-- script: |
-    npm test -- --ci
-  displayName: 'Run unit tests'
+    - script: npm test -- --ci
+      displayName: 'Run unit tests'
 
-# 5. Publish test results
-- task: PublishTestResults@2
-  displayName: 'Publish test results'
-  inputs:
-    testResultsFormat: 'JUnit'
-    testResultsFiles: '**/test-results/junit.xml'
-    failTaskOnFailedTests: true
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-results/junit.xml'
+        failTaskOnFailedTests: true
+      displayName: 'Publish test results'
 
-# 6. Prepare build artifact
-- script: |
-    mkdir dist
-    xcopy app dist\app /E /I
-    xcopy assets dist\assets /E /I
-    copy package.json dist\
-    copy package-lock.json dist\
-  displayName: 'Prepare build artifact'
+    - script: |
+        mkdir dist
+        xcopy app dist\app /E /I
+        xcopy assets dist\assets /E /I
+        copy package.json dist\
+        copy package-lock.json dist\
+      displayName: 'Prepare build artifact'
 
-# 7. Publish artifact
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish artifact'
-  inputs:
-    PathtoPublish: 'dist'
-    ArtifactName: 'nodejs-app'
-    publishLocation: 'Container'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'dist'
+        ArtifactName: '$(artifactName)'
+        publishLocation: 'Container'
+      displayName: 'Publish artifact'
+
+# ================= CD DEV =================
+- stage: Deploy_Dev
+  displayName: 'Deploy to Dev'
+  dependsOn: CI
+  jobs:
+  - deployment: DeployDev
+    environment: dev
+    pool:
+      name: self-hosted-pool
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifactName)
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Dev App Service'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: 'webAppLinux'
+              appName: $(webAppNameDev)
+              package: '$(Pipeline.Workspace)/$(artifactName)'
+
+# ================= CD PROD =================
+- stage: Deploy_Prod
+  displayName: 'Deploy to Production'
+  dependsOn: Deploy_Dev
+  jobs:
+  - deployment: DeployProd
+    environment: prod   # approval happens here
+    pool:
+      name: self-hosted-pool
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifactName)
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Prod App Service'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: 'webAppLinux'
+              appName: $(webAppNameProd)
+              package: '$(Pipeline.Workspace)/$(artifactName)'
