@@ -5,7 +5,7 @@ pool:
   name: self-hosted-pool
 
 variables:
-  nodeVersion: '20.x'
+  nodeVersion: '18.x'
 
 steps:
 # 1. Checkout source code
@@ -19,35 +19,35 @@ steps:
 
 # 3. Install dependencies
 - script: |
-    npm ci
+    npm install
   displayName: 'Install dependencies'
 
 # 4. Run unit tests
 - script: |
     npm test -- --ci
   displayName: 'Run unit tests'
-  env:
-    JEST_JUNIT_OUTPUT_DIR: $(System.DefaultWorkingDirectory)/test-results
-    JEST_JUNIT_OUTPUT_NAME: junit.xml
 
 # 5. Publish test results
 - task: PublishTestResults@2
+  displayName: 'Publish test results'
   inputs:
     testResultsFormat: 'JUnit'
-    testResultsFiles: '**/junit.xml'
+    testResultsFiles: '**/test-results/junit.xml'
     failTaskOnFailedTests: true
-  displayName: 'Publish test results'
 
 # 6. Prepare build artifact
 - script: |
-    mkdir -p dist
-    cp -r app assets package.json package-lock.json dist/
+    mkdir dist
+    xcopy app dist\app /E /I
+    xcopy assets dist\assets /E /I
+    copy package.json dist\
+    copy package-lock.json dist\
   displayName: 'Prepare build artifact'
 
 # 7. Publish artifact
 - task: PublishBuildArtifacts@1
+  displayName: 'Publish artifact'
   inputs:
     PathtoPublish: 'dist'
     ArtifactName: 'nodejs-app'
     publishLocation: 'Container'
-  displayName: 'Publish artifact'
