@@ -119,10 +119,11 @@ stages:
     steps:
     - checkout: self
     
-    - task: SonarQubePrepare@4
+    - task: SonarCloudPrepare@1
       displayName: 'Prepare SonarCloud analysis'
       inputs:
-        SonarQube: 'sonarqube-connection'
+        SonarCloud: 'sonarqube-connection'
+        organization: 'shruti-devops1'
         scannerMode: 'CLI'
         configMode: 'file'
 
@@ -137,14 +138,14 @@ stages:
       displayName: 'Run unit tests'
 
      #  Run SonarCloud analysis
-    - task: SonarQubeAnalyze@4
+    - task: SonarCloudAnalyze@1
       displayName: 'Run SonarCloud analysis'
 
     #  Enforce Quality Gate (FAILS CI if not passed)
-    - task: SonarQubePublish@4
+    - task: SonarCloudPublish@1
       displayName: 'Publish Quality Gate Result'
       inputs:
-        pollingTimeoutSec: '300' 
+        pollingTimeoutSec: '300 
 
     - script: |
         mkdir dist
