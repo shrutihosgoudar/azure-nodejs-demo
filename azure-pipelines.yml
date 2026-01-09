@@ -49,7 +49,7 @@ stages:
       displayName: 'Publish pipeline artifact'
       inputs:
         PathtoPublish: 'dist'
-        artifact: '$(artifactName)'
+        artifact: 'nodejs-app'
 
 # ================= CD DEV =================
 - stage: Deploy_Dev
@@ -65,7 +65,7 @@ stages:
         deploy:
           steps:
           - download: current
-            artifact: $(artifactName)
+            artifact: nodejs-app
 
           - task: AzureWebApp@1
             displayName: 'Deploy to Dev App Service'
