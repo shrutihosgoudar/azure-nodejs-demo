@@ -24,7 +24,7 @@ steps:
 
 # 4. Run unit tests
 - script: |
-    npm test -- --ci --reporters=default --reporters=jest-junit
+    npm test -- --ci
   displayName: 'Run unit tests'
   env:
     JEST_JUNIT_OUTPUT_DIR: $(System.DefaultWorkingDirectory)/test-results
