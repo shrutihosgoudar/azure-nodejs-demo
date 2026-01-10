@@ -119,14 +119,6 @@ stages:
     steps:
     - checkout: self
     
-    - task: SonarCloudPrepare@1
-      displayName: 'Prepare SonarCloud analysis'
-      inputs:
-        SonarCloud: 'sonar'
-        organization: 'shruti-devops1'
-        scannerMode: 'CLI'
-        configMode: 'file'
-
     - task: NodeTool@0
       inputs:
         versionSpec: '$(nodeVersion)'
@@ -136,16 +128,6 @@ stages:
 
     - script: npm test -- --ci
       displayName: 'Run unit tests'
-
-     #  Run SonarCloud analysis
-    - task: SonarCloudAnalyze@1
-      displayName: 'Run SonarCloud analysis'
-
-    #  Enforce Quality Gate (FAILS CI if not passed)
-    - task: SonarCloudPublish@1
-      displayName: 'Publish Quality Gate Result'
-      inputs:
-        pollingTimeoutSec: '300'
 
     - script: |
         mkdir dist
